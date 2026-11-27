@@ -1,0 +1,1 @@
+{"name":"filmsfera","private":true,"scripts":{"set-admin":"node scripts/set-admin.js"},"dependencies":{"firebase-admin":"^12.0.0"}}
