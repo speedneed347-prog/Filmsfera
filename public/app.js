@@ -66,10 +66,22 @@ async function movie(slug) {
     <div class="wrap det"><img class="card" style="width:100%;flex:none" src="${esc(opt(safeUrl(f.posterUrl),500))}" alt="${esc(f.title)} poster"><div>
     <p>${(f.genres||[]).map(g=>`<span class="chip">${esc(g)}</span>`).join("")}</p><p>${esc(f.description)}</p>
     <div class="panel">${row("Language",f.language)}${row("Release",f.releaseDate||f.releaseYear)}${row("Runtime",f.durationMinutes&&f.durationMinutes+" min")}${row("Director",f.director)}${row("Cast",f.cast)}${row("Production",f.production)}${row("IMDb",f.imdbRating)}</div>
-    <h2>Download</h2><div class="panel" id="dls">${dls.length?dls.map((d,i)=>`<div class="dl"><span><b>${esc(d.quality)}</b> · ${esc(d.format)} · ${esc(d.fileSize)} · ${esc(d.language)}<br><small>Mirror: ${esc(d.provider)} · ${d.linkType==="page"?"Opens a host page, not a direct file":"Direct file"}</small></span><button class="btn" data-i="${i}">Download</button></div>`).join(""):empty("No download links are active for this film.")}</div>
+    <p><a class="btn" href="#/download/${encodeURIComponent(f.slug)}">Download</a></p>
     ${(f.subtitles||[]).filter(x=>safeUrl(x.url)).length?`<h2>Subtitles</h2><div class="panel">${f.subtitles.filter(x=>safeUrl(x.url)).map(x=>`<a class="chip" target="_blank" rel="noopener noreferrer" href="${esc(safeUrl(x.url))}">${esc(x.language)}</a>`).join("")}</div>`:""}
     </div></div><div class="wrap"><h2>Screenshots</h2><div class="shots">${shots.length?shots.map((u,i)=>`<img loading="lazy" data-i="${i}" src="${esc(opt(u,400))}" alt="${esc(f.title)} screenshot ${i+1}">`).join(""):empty("No screenshots yet.")}</div></div>`;
     $(".shots").onclick = e => e.target.dataset.i && show(+e.target.dataset.i);
+
+  } catch(e){ app.innerHTML = `<div class="wrap">${fail(e)}</div>`; }
+}
+
+async function download(slug) {
+  app.innerHTML = `<div class="wrap"><div class="sk" style="height:200px"></div></div>`;
+  try { const s = await getDocs(q(where("slug","==",slug),limit(1))); if(s.empty) return app.innerHTML = `<div class="wrap">${empty("This film isn't available.")}</div>`;
+    const f = {id:s.docs[0].id,...s.docs[0].data()}; document.title = `Download ${f.title} — FILMSFERA`;
+    const dls = (f.downloadOptions||[]).filter(d=>d.active && safeUrl(d.url));
+    app.innerHTML = `<div class="wrap"><p><a href="#/movie/${encodeURIComponent(f.slug)}">← ${esc(f.title)}</a></p><h1>Download ${esc(f.title)}</h1>
+    <div class="panel" id="dls">${dls.length?dls.map((d,i)=>`<div class="dl"><span><b>${esc(d.quality)}</b> · ${esc(d.format)} · ${esc(d.fileSize)} · ${esc(d.language)}<br><small>Mirror: ${esc(d.provider)} · ${d.linkType==="page"?"Opens a host page, not a direct file":"Direct file"}</small></span><button class="btn" data-i="${i}">Download</button></div>`).join(""):empty("No download links are active for this film.")}</div>
+    </div>`;
     $("#dls").onclick = async e => { const i = e.target.dataset.i; if(i===undefined) return; const d = dls[i];
       if(f.confirmDownload && !confirm(`Open the ${d.quality} download from ${d.provider}?`)) return;
       window.open(safeUrl(d.url),"_blank","noopener,noreferrer");
@@ -86,7 +98,7 @@ async function route() {
   const [path,qs] = (location.hash.slice(1)||"/").split("?"); const p = new URLSearchParams(qs||""); const [,r,arg] = path.split("/");
   scrollTo(0,0); $("#menu").classList.remove("open"); document.title = "FILMSFERA";
   if(!r) return home(); if(r==="movies") return listing(p,"All Movies"); if(r==="latest") return listing(new URLSearchParams(),"Latest Releases");
-  if(r==="movie") return movie(decodeURIComponent(arg||"")); if(r==="search") return search(p.get("q")||""); if(r==="categories") return categories();
+  if(r==="download") return download(decodeURIComponent(arg||"")); if(r==="movie") return movie(decodeURIComponent(arg||"")); if(r==="search") return search(p.get("q")||""); if(r==="categories") return categories();
   const pg = PAGES[r]; app.innerHTML = pg ? `<div class="wrap"><h1>${pg[0]}</h1><p>${pg[1]}</p></div>` : `<div class="wrap">${empty("Page not found.")}</div>`;
 }
 $("#burger").onclick = () => $("#menu").classList.toggle("open");

@@ -5,6 +5,7 @@ import {firebaseConfig,cloudinary,GENRES,LANGS,safeUrl,esc,opt} from "./config.j
 const fa = initializeApp(firebaseConfig), auth = getAuth(fa), db = getFirestore(fa), root = document.getElementById("root");
 const $ = s => root.querySelector(s); let cur = null, shots = [], dls = [];
 document.getElementById("out").onclick = () => signOut(auth);
+const drive = u => { const m = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/) || u.match(/drive\.google\.com\/open\?id=([\w-]+)/); return m ? `https://drive.google.com/uc?export=download&id=${m[1]}` : u; };
 const slugify = s => s.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 async function upload(file) {
   const fd = new FormData(); fd.append("file",file); fd.append("upload_preset",cloudinary.uploadPreset);
@@ -62,6 +63,7 @@ async function save(e) {
     const up = async (fid,uid) => { const x=$("#"+fid).files[0]; return x ? await upload(x) : $("#"+uid).value.trim(); };
     const posterUrl = await up("pf","pu"), backdropUrl = await up("bf","bu");
     if(!safeUrl(posterUrl)) throw new Error("Poster is required (https URL).");
+    for(const d of dls){ d.url = drive((d.url||"").trim()); if(/drive\.google\.com/.test(d.url) && !d.provider) d.provider="Google Drive"; }
     for(const d of dls) if(!safeUrl(d.url)) throw new Error(`Invalid download URL: ${d.url||"(empty)"}`);
     const subtitles = $("#subs").value.split("\n").map(l=>l.split("|")).filter(x=>x[1]&&safeUrl(x[1].trim())).map(x=>({language:x[0].trim(),url:safeUrl(x[1].trim())}));
     const list = s => s.split(",").map(x=>x.trim()).filter(Boolean), title = $("#title").value.trim(), slug = slugify($("#slug").value||title);
